@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>624工单分析报告</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+:root{--bg:#f5f5f7;--card:#fff;--text:#1d1d1f;--text2:#86868b;--accent:#0071e3;--accent2:#1a8a3f;--accent3:#d97400;--accent4:#ff3b30;--border:#e5e5ea;--radius:16px;--shadow:0 2px 12px rgba(0,0,0,0.06)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC','Helvetica Neue',sans-serif;color:var(--text);line-height:1.6}
+.hero{background:linear-gradient(135deg,#001d3d 0,#003566 50%,#0071e3 100%);color:#fff;text-align:center;padding:clamp(32px,6vw,60px) clamp(16px,3vw,30px)}
+.hero h1{font-size:clamp(22px,4.5vw,36px);font-weight:700;margin-bottom:8px;letter-spacing:.02em}
+.hero p{font-size:clamp(13px,1.8vw,16px);opacity:.85;margin-bottom:12px}
+.hero .badge{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:4px 16px;font-size:12px;backdrop-filter:blur(5px)}
+.container{max-width:1200px;margin:0 auto;padding:clamp(16px,3vw,30px)}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(8px,1.5vw,16px);margin-bottom:clamp(16px,3vw,32px)}
+@media(max-width:640px){.stats-row{grid-template-columns:repeat(2,1fr)}}
+.stat-card{background:var(--card);border-radius:var(--radius);padding:clamp(16px,2.5vw,28px) clamp(12px,2vw,20px);box-shadow:var(--shadow);border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:clamp(80px,12vw,120px)}
+.stat-card .num{font-size:clamp(24px,4vw,36px);font-weight:700;line-height:1.1;text-align:center}
+.stat-card .label{font-size:clamp(11px,1.5vw,13px);color:var(--text2);text-align:center;margin-top:clamp(2px,.4vw,6px)}
+.section{margin-bottom:clamp(14px,2.5vw,24px)}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:clamp(18px,3vw,32px)}
+.card h2{font-size:clamp(16px,2.2vw,22px);font-weight:700;margin-bottom:4px}
+.card h3{font-size:clamp(14px,1.8vw,18px);font-weight:600;margin:20px 0 10px}
+.highlight-box{background:#f0f6ff;border-left:4px solid var(--accent);border-radius:8px;padding:clamp(12px,2vw,20px);margin:16px 0 20px;font-size:clamp(13px,1.5vw,15px);color:#1d1d1f;line-height:1.8}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px)}
+.chart-single{max-width:600px;margin:0 auto}
+canvas{max-height:280px;max-width:100%;width:100%!important;height:auto!important}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:16px 0}
+table{width:100%;border-collapse:collapse;font-size:clamp(12px,1.5vw,14px)}
+th{background:#f5f5f7;color:var(--text);font-weight:600;text-align:left;padding:10px 14px;border-bottom:2px solid var(--border);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--border)}
+tr:hover{background:#f8f9ff}
+.badge-sm{display:inline-block;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:500}
+.badge-red{background:#ffeaea;color:var(--accent4)}.badge-green{background:#e8f8ed;color:var(--accent2)}.badge-blue{background:#e8f2ff;color:var(--accent)}.badge-orange{background:#fff3e5;color:var(--accent3)}.badge-gray{background:#f0f0f0;color:var(--text2)}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,20px)}
+.summary-item{border-left:4px solid;border-radius:8px;padding:clamp(14px,2.5vw,24px)}
+.summary-item.red{border-color:var(--accent4)}.summary-item.orange{border-color:var(--accent3)}.summary-item.blue{border-color:var(--accent)}.summary-item.green{border-color:var(--accent2)}
+.summary-item h4{font-size:clamp(14px,1.8vw,16px);margin-bottom:8px}
+.summary-item ul{list-style:none;padding:0;font-size:clamp(12px,1.5vw,14px);color:var(--text2);line-height:2}
+.suggestion-box{border-radius:var(--radius);padding:clamp(18px,3vw,28px);margin-top:20px}
+.suggestion-box h4{font-size:16px;margin-bottom:12px;color:var(--accent)}
+.suggestion-box ol{padding-left:20px;line-height:2;font-size:clamp(13px,1.5vw,15px)}
+.bottom-actions{position:fixed;bottom:clamp(16px,3vw,28px);right:clamp(16px,3vw,28px);z-index:1000;display:flex;gap:10px;flex-direction:row}
+@media(max-width:480px){.bottom-actions{flex-direction:column;gap:8px}}
+.action-btn{padding:clamp(8px,1.2vw,12px) clamp(16px,2.5vw,24px);border:none;border-radius:28px;color:#fff;font-size:clamp(12px,1.3vw,14px);font-weight:500;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.25);transition:all .2s;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.action-btn:active{transform:scale(.95)}
+.action-btn.blue{background:#0071e3}.action-btn.gray{background:rgba(99,99,102,.92)}.action-btn.green{background:#34c759}.action-btn.orange{background:#ff9500}
+.editor-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:2000;align-items:center;justify-content:center;padding:20px}
+.editor-overlay.active{display:flex}
+.editor-panel{background:#fff;border-radius:20px;width:min(90vw,700px);max-height:85vh;overflow-y:auto;padding:clamp(20px,3vw,32px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.editor-panel textarea{width:100%;min-height:300px;padding:14px;border:1px solid var(--border);border-radius:12px;font-size:14px;line-height:1.7;font-family:inherit;resize:vertical}
+.editor-actions{display:flex;gap:10px;margin-top:16px;justify-content:flex-end}
+.editor-actions button{padding:10px 24px;border:none;border-radius:28px;font-size:14px;font-weight:500;cursor:pointer}
+.editor-actions .save{background:var(--accent);color:#fff}
+.editor-actions .cancel{background:#f5f5f7;color:var(--text)}
+@media(max-width:768px){.chart-grid{grid-template-columns:1fr}.summary-grid{grid-template-columns:1fr}}
+@media(max-width:640px){.stats-row{grid-template-columns:1fr 1fr}.summary-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- ====== 头部 ====== -->
+<div class="hero">
+  <h1 id="heroTitle">📊 624 工单汇总分析报告</h1>
+  <p id="heroSub">WPS AI 插件 · 版本 0.1.2.22 测试工单</p>
+  <span class="badge" id="heroDate">数据截止：2026年6月24日</span>
+</div>
+
+<div class="container">
+
+<!-- ====== 统计卡片 ====== -->
+<div class="stats-row">
+  <div class="stat-card"><div class="num" style="color:#0071e3">34</div><div class="label">工单总数</div></div>
+  <div class="stat-card"><div class="num" style="color:#ff3b30">23</div><div class="label">BUG 数量</div></div>
+  <div class="stat-card"><div class="num" style="color:#34c759">11</div><div class="label">需求数量</div></div>
+  <div class="stat-card"><div class="num" style="color:#ff9500">23</div><div class="label">待处理工单</div></div>
+</div>
+
+<!-- ====== 一、整体概况 ====== -->
+<div class="section">
+  <div class="card">
+    <h2>一、整体概况 📊</h2>
+    <div class="highlight-box" id="summary1">
+      今日共收到 <strong>34</strong> 条工单，全部来自版本 <strong>0.1.2.22</strong> 测试反馈。其中 <strong>BUG 23 条（67.6%）</strong>，需求 11 条（32.4%），BUG 占比显著偏高。<br>
+      处理进度：<strong>仅 7 条已处理（20.6%）</strong>，23 条仍处于待处理状态（67.6%），处理率偏低，需加快响应速度。<br>
+      所有工单紧急程度均为「中」，无高优先级工单。提交集中在韦展（11条）、马毓涵（15条）、焦雨（8条）三人。
+    </div>
+    <div class="chart-grid">
+      <div><canvas id="chartCategory"></canvas></div>
+      <div><canvas id="chartStatus"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 二、功能模块分析 ====== -->
+<div class="section">
+  <div class="card">
+    <h2>二、功能模块分析 🔍</h2>
+    <div class="highlight-box" id="summary2">
+      <strong>🔴 排版模块是重灾区</strong>：13 条工单全部为 BUG（BUG率 100%），且全部处于待处理状态，问题集中在模板提取、预览、标题识别、附件排版等环节。<br>
+      <strong>🟡 润色模块需关注</strong>：7 条工单中 2 条为 BUG，涉及自定义风格失效和口语化错误；5 条为需求，涉及定位跳转和回退性能。<br>
+      <strong>🟠 续写模块交互需优化</strong>：6 条工单中 BUG 3 条、需求 3 条，主要问题在保存逻辑和段落级续写能力缺失。<br>
+      <strong>🟢 使用体验优化已全部处理</strong>：5 条工单（含升级流程、历史对话、设置面板问题）已全部闭环。
+    </div>
+    <div class="chart-grid">
+      <div><canvas id="chartFuncBar"></canvas></div>
+      <div><canvas id="chartFuncBugRate"></canvas></div>
+    </div>
+    <h3>功能模块明细表</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>功能模块</th><th>工单总数</th><th>BUG 数</th><th>需求数</th><th>BUG 率</th><th>已处理</th><th>处理中</th><th>取消</th><th>待处理</th><th>风险等级</th></tr></thead>
+        <tbody>
+          <tr><td>排版</td><td>13</td><td>13</td><td>0</td><td><span class="badge-sm badge-red">100%</span></td><td>0</td><td>0</td><td>0</td><td>13</td><td><span class="badge-sm badge-red">高</span></td></tr>
+          <tr><td>润色</td><td>7</td><td>2</td><td>5</td><td><span class="badge-sm badge-orange">28.6%</span></td><td>0</td><td>2</td><td>0</td><td>5</td><td><span class="badge-sm badge-orange">中</span></td></tr>
+          <tr><td>续写</td><td>6</td><td>3</td><td>3</td><td><span class="badge-sm badge-orange">50.0%</span></td><td>1</td><td>1</td><td>0</td><td>4</td><td><span class="badge-sm badge-orange">中</span></td></tr>
+          <tr><td>使用体验优化</td><td>5</td><td>2</td><td>3</td><td><span class="badge-sm badge-blue">40.0%</span></td><td>5</td><td>0</td><td>0</td><td>0</td><td><span class="badge-sm badge-green">低</span></td></tr>
+          <tr><td>校对</td><td>3</td><td>3</td><td>0</td><td><span class="badge-sm badge-red">100%</span></td><td>1</td><td>0</td><td>1</td><td>1</td><td><span class="badge-sm badge-red">高</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 三、提交人分布 ====== -->
+<div class="section">
+  <div class="card">
+    <h2>三、提交人分布 👥</h2>
+    <div class="highlight-box" id="summary3">
+      马毓涵提交最多（15条，占44.1%），其中 BUG 11 条、需求 4 条，覆盖全部 5 个功能模块，说明测试覆盖面最广。<br>
+      韦展提交 11 条（占32.4%），BUG 8 条、需求 3 条，侧重排版和续写功能。<br>
+      焦雨提交 8 条（占23.5%），BUG 与需求各 4 条，集中测试排版和润色模块。
+    </div>
+    <div class="chart-grid">
+      <div><canvas id="chartSubmitterCat"></canvas></div>
+      <div><canvas id="chartSubmitterFunc"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 四、重点问题梳理 ====== -->
+<div class="section">
+  <div class="card">
+    <h2>四、重点问题梳理 🎯</h2>
+    <div class="summary-grid">
+      <div class="summary-item red">
+        <h4>🔴 排版模块 — 模板应用全线崩溃</h4>
+        <ul>
+          <li>• 标题识别错误：正文被识别为三级标题</li>
+          <li>• 模板预览与实际不一致（字体显示为宋体/黑体）</li>
+          <li>• 套用模板后表头表尾漂移或缺失</li>
+          <li>• 附件排版错误、首行缩进失效</li>
+          <li>• 字数统计异常（50万字显示为52万）</li>
+          <li>• 应用排版后在桌面意外保存文件</li>
+        </ul>
+      </div>
+      <div class="summary-item orange">
+        <h4>🟠 润色模块 — 风格应用不稳定</h4>
+        <ul>
+          <li>• 自定义提示词（活泼/年轻化）失效</li>
+          <li>• 口语化风格触发错误</li>
+          <li>• 润色结果定位跳转不一致</li>
+          <li>• 取消应用回退速度慢</li>
+          <li>• 源文字颜色继承到润色结果</li>
+        </ul>
+      </div>
+      <div class="summary-item blue">
+        <h4>🔵 续写模块 — 交互逻辑存缺陷</h4>
+        <ul>
+          <li>• 续写后未保存但内容残留</li>
+          <li>• 不支持段落级独立续写</li>
+          <li>• 空白文档直接续写出文字</li>
+          <li>• 30%概率流程执行失败</li>
+          <li>• 续写中间多余空行</li>
+        </ul>
+      </div>
+      <div class="summary-item green">
+        <h4>🟢 校对模块 — 核心功能受阻</h4>
+        <ul>
+          <li>• 自由校对仅选标点符号无效</li>
+          <li>• 全面校对仅选标点符号也无效</li>
+          <li>• 50万字大文档全面校对卡死</li>
+          <li>• 修订用户名显示异常（数字串）</li>
+        </ul>
+      </div>
+    </div>
+    <h3>问题热力图</h3>
+    <div class="chart-single"><canvas id="chartHeatmap"></canvas></div>
+  </div>
+</div>
+
+<!-- ====== 五、处理进度 ====== -->
+<div class="section">
+  <div class="card">
+    <h2>五、处理进度追踪 ⏱️</h2>
+    <div class="highlight-box">
+      已处理 <strong>7 条</strong>（均为使用体验优化类需求+少量校对BUG），处理中 <strong>3 条</strong>（润色定位、续写保存、润色应用），取消 <strong>1 条</strong>（校对修订显示异常），<strong>23 条待处理</strong>。<br>
+      ⚠️ 排版模块 <strong>13 条 BUG 全部待处理</strong>，批量为零，属于紧急短板。
+    </div>
+    <div class="chart-grid">
+      <div><canvas id="chartProgress"></canvas></div>
+      <div><canvas id="chartFuncStatus"></canvas></div>
+    </div>
+    <h3>已处理工单列表</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>功能</th><th>问题描述</th><th>研发负责人</th></tr></thead>
+        <tbody>
+          <tr><td>使用体验</td><td>升级跳过中间版本</td><td>朱文祥 / 董莹雪</td></tr>
+          <tr><td>使用体验</td><td>设置面板直接看升级信息</td><td>廖鸿伟 / 董莹雪</td></tr>
+          <tr><td>使用体验</td><td>首次升级提示异常</td><td>—</td></tr>
+          <tr><td>使用体验</td><td>升级后红叹号残留需手动刷新</td><td>—</td></tr>
+          <tr><td>使用体验</td><td>历史对话回溯失效</td><td>廖鸿伟 / 董莹雪</td></tr>
+          <tr><td>校对</td><td>自由校对仅标点符号无效</td><td>Skye</td></tr>
+          <tr><td>续写</td><td>续写结果多余空行</td><td>朱文祥 / 董莹雪</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 六、总结与建议 ====== -->
+<div class="section">
+  <div class="card">
+    <h2>六、总结与建议 📋</h2>
+    <div class="summary-grid">
+      <div class="summary-item red">
+        <h4>⚠️ 风险一：排版模块需紧急修复</h4>
+        <p style="color:var(--text2);font-size:13px;line-height:1.8">13 条 BUG 全部待处理，模板应用的「套用→预览→输出」全链路存在问题。作为核心卖点功能，质量问题直接影响用户信任。</p>
+      </div>
+      <div class="summary-item orange">
+        <h4>⚠️ 风险二：整体处理率偏低</h4>
+        <p style="color:var(--text2);font-size:13px;line-height:1.8">仅 20.6% 工单已处理，67.6% 仍在待处理状态。其中已处理的 7 条集中在使用体验优化，核心功能 BUG 几乎未被响应。</p>
+      </div>
+      <div class="summary-item blue">
+        <h4>💡 建议一：排版问题集中攻关</h4>
+        <p style="color:var(--text2);font-size:13px;line-height:1.8">建议安排专项 sprint，集中处理排版模块 13 条 BUG。可按「标题识别→模板预览→表头表尾→附件排版」的顺序排优先级。</p>
+      </div>
+      <div class="summary-item green">
+        <h4>💡 建议二：建立工单响应机制</h4>
+        <p style="color:var(--text2);font-size:13px;line-height:1.8">34 条工单中仅有 7 条有明确 Issue 链接和研发负责人。建议每一条 BUG 都关联 Issue 并分配负责人，确保可追踪。</p>
+      </div>
+    </div>
+    <div class="suggestion-box">
+      <h4>📌 行动建议</h4>
+      <ol>
+        <li><strong>立即行动</strong>：排查排版模板应用全链路（提取→预览→应用），修复核心 6 类 BUG</li>
+        <li><strong>本周完成</strong>：为 23 条待处理工单全部创建 Issue 并分配研发负责人</li>
+        <li><strong>本周完成</strong>：续写模块修复保存逻辑 + 支持段落级续写</li>
+        <li><strong>持续跟进</strong>：润色风格引擎排查，修复自定义风格失效和口语化错误</li>
+        <li><strong>流程优化</strong>：建立「提测→工单→Issue→修复→验收」闭环，避免工单石沉大海</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- ====== 底部操作栏 ====== -->
+<div class="bottom-actions">
+  <button class="action-btn blue" onclick="enterFullscreen()">⛶ 全屏</button>
+  <button class="action-btn green" onclick="exportImage()">🖼 导出长图</button>
+  <button class="action-btn orange" onclick="exportPDF()">📄 导出PDF</button>
+  <button class="action-btn gray" onclick="openEditor()">✎ 编辑</button>
+</div>
+
+<!-- ====== 编辑器遮罩 ====== -->
+<div class="editor-overlay" id="editorOverlay" onclick="closeEditorOutside(event)">
+  <div class="editor-panel">
+    <h3>✎ 编辑文本内容</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px">修改下方文本后点击保存，页面内容会同步更新。</p>
+    <textarea id="editorTextarea"></textarea>
+    <div class="editor-actions">
+      <button class="cancel" onclick="closeEditor()">取消</button>
+      <button class="save" onclick="saveEditor()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ====== 颜色常量 ======
+const C={blue:'#0071e3',green:'#34c759',orange:'#ff9500',red:'#ff3b30',purple:'#7b3fe0',teal:'#5ac8fa',pink:'#ff6482',yellow:'#ffd60a',gray:'#8e8e93'};
+Chart.defaults.animation={duration:800};
+Chart.defaults.plugins.legend={labels:{padding:20,usePointStyle:true,pointStyleWidth:8}};
+
+// ====== 图表1：工单分类（环形图） ======
+new Chart(document.getElementById('chartCategory'),{
+  type:'doughnut',
+  data:{
+    labels:['BUG','需求'],
+    datasets:[{
+      data:[23,11],
+      backgroundColor:[C.red,C.blue],
+      borderWidth:0,
+      hoverBorderWidth:2,
+      hoverBorderColor:'#fff'
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:true,
+    plugins:{
+      title:{display:true,text:'工单分类占比',font:{size:14,weight:'600'},padding:16}
+    }
+  }
+});
+
+// ====== 图表2：处理状态分布（环形图） ======
+new Chart(document.getElementById('chartStatus'),{
+  type:'doughnut',
+  data:{
+    labels:['待处理','已处理','处理中','取消工单'],
+    datasets:[{
+      data:[23,7,3,1],
+      backgroundColor:[C.orange,C.green,C.blue,C.gray],
+      borderWidth:0,
+      hoverBorderWidth:2,
+      hoverBorderColor:'#fff'
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:true,
+    plugins:{
+      title:{display:true,text:'处理状态分布',font:{size:14,weight:'600'},padding:16}
+    }
+  }
+});
+
+// ====== 图表3：功能模块工单量（横向柱状图） ======
+new Chart(document.getElementById('chartFuncBar'),{
+  type:'bar',
+  data:{
+    labels:['排版','润色','续写','使用体验优化','校对'],
+    datasets:[
+      {label:'BUG',data:[13,2,3,2,3],backgroundColor:C.red,borderRadius:4},
+      {label:'需求',data:[0,5,3,3,0],backgroundColor:C.blue,borderRadius:4}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:true,
+    indexAxis:'y',
+    plugins:{
+      title:{display:true,text:'各功能模块工单构成',font:{size:14,weight:'600'},padding:16}
+    },
+    scales:{x:{stacked:true,ticks:{stepSize:5}},y:{stacked:true}}
+  }
+});
+
+// ====== 图表4：BUG率对比（柱状图） ======
+new Chart(document.getElementById('chartFuncBugRate'),{
+  type:'bar',
+  data:{
+    labels:['排版','校对','续写','使用体验优化','润色'],
+    datasets:[{
+      label:'BUG率',
+      data:[100,100,50,40,28.6],
+      backgroundColor:[C.red,C.red,C.orange,C.blue,C.green],
+      borderRadius:4
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:true,
+    plugins:{
+      title:{display:true,text:'各模块 BUG 率 (%)',font:{size:14,weight:'600'},padding:16},
+      legend:{display:false}
+    },
+    scales:{y:{beginAtZero:true,max:110,ticks:{callback:v=>v+'%'}}}
+  }
+});
+
+// ====== 图表5：提交人 x 工单分类 ======
+new Chart(document.getElementById('chartSubmitterCat'),{
+  type:'bar',
+  data:{
+    labels:['马毓涵','韦展','焦雨'],
+    datasets:[
+      {label:'BUG',data:[11,8,4],backgroundColor:C.red,borderRadius:4},
+      {label:'需求',data:[4,3,4],backgroundColor:C.blue,borderRadius:4}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:true,
+    plugins:{
+      title:{display:true,text:'提交人工单分类',font:{size:14,weight:'600'},padding:16}
+    },
+    scales:{x:{stacked:true},y:{stacked:true,ticks:{stepSize:5}}}
+  }
+});
+
+// ====== 图表6：提交人 x 功能模块 ======
+new Chart(document.getElementById('chartSubmitterFunc'),{
+  type:'bar',
+  data:{
+    labels:['马毓涵','韦展','焦雨'],
+    datasets:[
+      {label:'排版',data:[5,4,4],backgroundColor:C.red,borderRadius:4},
+      {label:'润色',data:[2,1,4],backgroundColor:C.orange,borderRadius:4},
+      {label:'续写',data:[4,2,0],backgroundColor:C.blue,borderRadius:4},
+      {label:'校对',data:[1,2,0],backgroundColor:C.purple,borderRadius:4},
+      {label:'使用体验',data:[3,2,0],backgroundColor:C.green,borderRadius:4}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:true,
+    plugins:{
+      title:{display:true,text:'提交人测试覆盖范围',font:{size:14,weight:'600'},padding:16}
+    },
+    scales:{x:{stacked:true},y:{stacked:true,ticks:{stepSize:5}}}
+  }
+});
+
+// ====== 图表7：问题热力图（横向柱状图-按问题密度） ======
+new Chart(document.getElementById('chartHeatmap'),{
+  type:'bar',
+  data:{
+    labels:['排版-模板应用','排版-标题识别','排版-预览显示','润色-风格失效','续写-保存逻辑','续写-段落控制','校对-功能异常','使用体验-升级'],
+    datasets:[{
+      label:'问题数',
+      data:[5,3,3,2,2,2,3,3],
+      backgroundColor:[C.red,C.red,C.red,C.orange,C.blue,C.blue,C.red,C.green],
+      borderRadius:4
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:true,
+    indexAxis:'y',
+    plugins:{
+      title:{display:true,text:'问题密度分布（按子类别估算）',font:{size:14,weight:'600'},padding:16},
+      legend:{display:false}
+    },
+    scales:{x:{ticks:{stepSize:1}}}
+  }
+});
+
+// ====== 图表8：处理进度（柱状图） ======
+new Chart(document.getElementById('chartProgress'),{
+  type:'bar',
+  data:{
+    labels:['待处理','已处理','处理中','取消'],
+    datasets:[{
+      data:[23,7,3,1],
+      backgroundColor:[C.orange,C.green,C.blue,C.gray],
+      borderRadius:6
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:true,
+    plugins:{
+      title:{display:true,text:'处理进度概览',font:{size:14,weight:'600'},padding:16},
+      legend:{display:false}
+    },
+    scales:{y:{beginAtZero:true,ticks:{stepSize:5}}}
+  }
+});
+
+// ====== 图表9：各模块处理状态 ======
+new Chart(document.getElementById('chartFuncStatus'),{
+  type:'bar',
+  data:{
+    labels:['排版','润色','续写','校对','使用体验优化'],
+    datasets:[
+      {label:'待处理',data:[13,5,4,1,0],backgroundColor:C.orange,borderRadius:4},
+      {label:'已处理',data:[0,0,1,1,5],backgroundColor:C.green,borderRadius:4},
+      {label:'处理中',data:[0,2,1,0,0],backgroundColor:C.blue,borderRadius:4},
+      {label:'取消',data:[0,0,0,1,0],backgroundColor:C.gray,borderRadius:4}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:true,
+    plugins:{
+      title:{display:true,text:'各模块处理状态',font:{size:14,weight:'600'},padding:16}
+    },
+    scales:{x:{stacked:true},y:{stacked:true,ticks:{stepSize:5}}}
+  }
+});
+
+// ====== 按钮功能 ======
+function enterFullscreen(){
+  if(document.documentElement.requestFullscreen){
+    document.documentElement.requestFullscreen().catch(()=>{});
+  }else if(document.documentElement.webkitRequestFullscreen){
+    document.documentElement.webkitRequestFullscreen();
+  }
+}
+function exportImage(){
+  const btn=document.querySelector('.action-btn.green');
+  const orig=btn.innerHTML;
+  btn.innerHTML='⏳ 导出中...';btn.disabled=true;
+  const actions=document.querySelector('.bottom-actions');
+  if(actions)actions.style.display='none';
+  html2canvas(document.documentElement,{scale:2,useCORS:true,backgroundColor:'#f5f5f7',logging:false})
+    .then(canvas=>{
+      const link=document.createElement('a');
+      link.download='624工单分析报告.png';
+      link.href=canvas.toDataURL('image/png');
+      link.click();
+    }).catch(()=>{alert('导出失败，请重试')})
+    .finally(()=>{
+      if(actions)actions.style.display='';
+      btn.innerHTML=orig;btn.disabled=false;
+    });
+}
+function exportPDF(){
+  const style=document.createElement('style');
+  style.id='print-style';
+  style.textContent='@page{size:A4;margin:1.2cm}.bottom-actions{display:none!important}.editor-overlay{display:none!important}.section{break-inside:avoid;page-break-inside:avoid}canvas{max-width:100%!important;height:auto!important}';
+  document.head.appendChild(style);
+  window.print();
+  setTimeout(()=>{document.getElementById('print-style')?.remove()},100);
+}
+function openEditor(){
+  const lines=[];
+  lines.push('【标题】'+document.getElementById('heroTitle').textContent);
+  lines.push('【副标题】'+document.getElementById('heroSub').textContent);
+  lines.push('【日期】'+document.getElementById('heroDate').textContent);
+  const labels=['一','二','三'];
+  for(let i=1;i<=3;i++){
+    const el=document.getElementById('summary'+i);
+    if(el) lines.push('【摘要'+labels[i-1]+'】'+el.innerHTML.replace(/<br\s*\/?>/g,'\n'));
+  }
+  document.getElementById('editorTextarea').value=lines.join('\n\n');
+  document.getElementById('editorOverlay').classList.add('active');
+}
+function saveEditor(){
+  const text=document.getElementById('editorTextarea').value;
+  const parts=text.split(/\n\n+/);
+  const map={};
+  for(const p of parts){
+    const m=p.match(/^【(.+?)】([\s\S]*)$/);
+    if(m) map[m[1]]=m[2].trim();
+  }
+  if(map['标题']) document.getElementById('heroTitle').textContent=map['标题'];
+  if(map['副标题']) document.getElementById('heroSub').textContent=map['副标题'];
+  if(map['日期']) document.getElementById('heroDate').textContent=map['日期'];
+  for(let i=1;i<=3;i++){
+    const key='摘要'+'一二三'[i-1];
+    if(map[key]) document.getElementById('summary'+i).innerHTML=map[key].replace(/\n/g,'<br>');
+  }
+  closeEditor();
+}
+function closeEditor(){
+  document.getElementById('editorOverlay').classList.remove('active');
+}
+function closeEditorOutside(e){
+  if(e.target===document.getElementById('editorOverlay')) closeEditor();
+}
+</script>
+</body>
+</html>
